@@ -1,16 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import urllib
-import pycurl
-import StringIO
+import urllib, urllib2
 import json
 from time import sleep
 
 # Change it to your account information here
 LOGIN_EMAIL = 'example@example.com'
 LOGIN_PWD = 'examplepwd'
-DOMAIN = 'Example.com'
+DOMAIN = 'example.com'
 SUBDOMAIN = 'www'
 CHECK_INTERVAL = 10 # Time in millis
 
@@ -26,18 +24,15 @@ def get_ext_ip():
 
 # fire a request to dnspod
 def fire_request(url, post_data_dict):
-	curl = pycurl.Curl()
-	return_msg = StringIO.StringIO()
-	pub_fields = 'login_email=' + LOGIN_EMAIL + '&login_password=' + LOGIN_PWD + '&format=json'
+	pub_data_fields = 'login_email=' + LOGIN_EMAIL + '&login_password=' + LOGIN_PWD + '&format=json'
+	header = {'User-Agent':'dnspod-ddnsd-py/0.1(xys7326@gmail.com)'}
+	post_data = pub_data_fields + '&' + urllib.urlencode(post_data_dict)
 
-	curl.setopt(pycurl.URL, url)
-	curl.setopt(pycurl.POST, 1)
-	curl.setopt(pycurl.WRITEFUNCTION, return_msg.write)
-	curl.setopt(pycurl.USERAGENT, 'dnspod-ddnsd-py/0.1(xys7326@gmail.com)')
-	curl.setopt(pycurl.POSTFIELDS, pub_fields + '&' + urllib.urlencode(post_data_dict))
+	# urllib2 POST data automatically when "data" parameter(The second parameter) given.
+	request = urllib2.Request(url, post_data, header) 
+	return_msg = urllib2.urlopen(request)
 
-	curl.perform()
-	return return_msg.getvalue()
+	return return_msg.read()
 
 def get_record_value(domain_id, record_id):
 	param = {'domain_id':domain_id, 'record_id':record_id}
@@ -61,8 +56,6 @@ def main(domain):
 
 	# fetch subdomain record_id
 	param = {'domain_id':domain_id, 'sub_domain':SUBDOMAIN}
-	param_t = {'domain_id':domain_id}
-	print urllib.unquote(fire_request(RECORD_LIST, param_t))
 	record_id = json.loads(urllib.unquote(fire_request(RECORD_LIST, param)))['records'][0]['id']
 
 	while True:
